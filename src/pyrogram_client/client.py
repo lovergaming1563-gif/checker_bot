@@ -1,10 +1,10 @@
-from pyrogram import Client
+from hydrogram import Client
 from src.core.config import config
 from src.utils.logger import logger
 from typing import Optional
 
 class PyrogramManager:
-    """Manages the lifecycle of the Pyrogram user client."""
+    """Manages the lifecycle of the Pyrogram (Hydrogram) user client."""
     
     def __init__(self):
         self._client: Optional[Client] = None
