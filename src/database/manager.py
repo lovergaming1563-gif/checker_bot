@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -19,6 +20,18 @@ class DatabaseManager:
     """Manages asynchronous database connections and sessions."""
 
     def __init__(self, db_url: str):
+        # Create directory if it's a local sqlite database
+        if db_url.startswith("sqlite"):
+            # Extract path from sqlite+aiosqlite:///data/bot.db
+            db_path = db_url.split("///")[-1]
+            db_dir = os.path.dirname(db_path)
+            if db_dir and not os.path.exists(db_dir):
+                try:
+                    os.makedirs(db_dir, exist_ok=True)
+                    logger.info(f"Created database directory: {db_dir}")
+                except Exception as e:
+                    logger.error(f"Failed to create database directory {db_dir}: {e}")
+
         self.engine = create_async_engine(
             db_url,
             echo=False,  # Set to True for SQL debugging
