@@ -15,7 +15,7 @@ from src.monitoring.alerts import send_admin_alert
 from src.monitoring.uptime_monitor import uptime_monitor
 from src.pyrogram_client.client import start_pyrogram, stop_pyrogram
 
-from aiohttp import web
+from aiohttp import web, ClientSession
 import os
 
 async def ping_handler(request):
@@ -36,6 +36,28 @@ async def start_web_server():
     await site.start()
     logger.info(f"Web server started on port {port} for keep-alive pings.")
 
+async def self_ping_task():
+    """Background task to ping itself to keep Render alive."""
+    url = os.environ.get("RENDER_EXTERNAL_URL")
+    if not url:
+        logger.info("RENDER_EXTERNAL_URL not set, skipping self-ping.")
+        return
+
+    logger.info(f"Starting self-ping task for {url}")
+    while True:
+        try:
+            async with ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        logger.debug("Self-ping successful.")
+                    else:
+                        logger.warning(f"Self-ping failed with status: {response.status}")
+        except Exception as e:
+            logger.error(f"Error during self-ping: {e}")
+        
+        # Ping every 10 minutes
+        await asyncio.sleep(600)
+
 async def main():
     """Application bootstrap."""
     
@@ -43,6 +65,9 @@ async def main():
     
     # Start web server for Render
     await start_web_server()
+    
+    # Start self-ping background task
+    asyncio.create_task(self_ping_task())
     
     # Initialize database
     await db_manager.init_db()
