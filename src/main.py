@@ -63,39 +63,39 @@ async def main():
     
     logger.info("Starting checker-bot...")
     
-    # Start web server for Render
+    # 1. Start web server IMMEDIATELY for Render port binding
     await start_web_server()
     
-    # Start self-ping background task
+    # 2. Start self-ping background task
     asyncio.create_task(self_ping_task())
     
-    # Initialize database
-    await db_manager.init_db()
-    
-    # Initialize Pyrogram
-    await start_pyrogram()
-    
-    # Initialize bot and dispatcher
-    bot = Bot(token=config.BOT_TOKEN)
-    dp = Dispatcher()
-    
-    # Register Middlewares
-    dp.update.outer_middleware(RegistrationMiddleware())
-    dp.update.outer_middleware(ForceJoinMiddleware())
-    
-    # Register Admin Middleware to the admin router only
-    admin_router.message.middleware(AdminCheckMiddleware())
-    admin_router.callback_query.middleware(AdminCheckMiddleware())
-    
-    # Include Routers
-    dp.include_router(user_router)
-    dp.include_router(group_router)
-    dp.include_router(admin_router)
-    
-    # Startup Alert
-    await send_admin_alert(bot, "Bot started successfully! 🚀")
-    
     try:
+        # 3. Initialize database
+        await db_manager.init_db()
+        
+        # 4. Initialize Pyrogram
+        await start_pyrogram()
+        
+        # 5. Initialize bot and dispatcher
+        bot = Bot(token=config.BOT_TOKEN)
+        dp = Dispatcher()
+        
+        # Register Middlewares
+        dp.update.outer_middleware(RegistrationMiddleware())
+        dp.update.outer_middleware(ForceJoinMiddleware())
+        
+        # Register Admin Middleware to the admin router only
+        admin_router.message.middleware(AdminCheckMiddleware())
+        admin_router.callback_query.middleware(AdminCheckMiddleware())
+        
+        # Include Routers
+        dp.include_router(user_router)
+        dp.include_router(group_router)
+        dp.include_router(admin_router)
+        
+        # Startup Alert
+        await send_admin_alert(bot, "Bot started successfully! 🚀")
+        
         logger.info("Bot is polling...")
         # Explicitly allow edited_message updates
         await dp.start_polling(
@@ -103,15 +103,26 @@ async def main():
             allowed_updates=["message", "edited_message", "callback_query", "chat_member"]
         )
     except Exception as e:
-        logger.error(f"Critical error during polling: {e}")
-        await send_admin_alert(bot, f"Critical error during polling: `{e}`")
+        logger.error(f"Critical error during startup: {e}")
+        # Try to send alert if bot was initialized
+        try:
+            bot = Bot(token=config.BOT_TOKEN)
+            await send_admin_alert(bot, f"Critical error during startup: `{e}`")
+            await bot.session.close()
+        except:
+            pass
+        raise e
     finally:
         logger.info("Closing sessions...")
-        uptime = uptime_monitor.get_uptime()
-        await send_admin_alert(bot, f"Bot is shutting down. 🛑\nUptime: `{uptime}`")
+        try:
+            uptime = uptime_monitor.get_uptime()
+            bot = Bot(token=config.BOT_TOKEN)
+            await send_admin_alert(bot, f"Bot is shutting down. 🛑\nUptime: `{uptime}`")
+            await bot.session.close()
+        except:
+            pass
         
         await stop_pyrogram()
-        await bot.session.close()
         await db_manager.close()
 
 if __name__ == "__main__":

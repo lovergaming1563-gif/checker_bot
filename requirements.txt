@@ -3,6 +3,10 @@ sqlalchemy
 aiosqlite
 python-dotenv
 alembic
-pyrogram
+pyrogram-patched
 tgcrypto
 aiohttp
+pydantic
+aiofiles
+typing-inspection
+pysocks
