@@ -1,0 +1,8 @@
+aiogram
+sqlalchemy
+aiosqlite
+python-dotenv
+alembic
+pyrogram
+tgcrypto
+aiohttp
